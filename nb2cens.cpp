@@ -1,5 +1,7 @@
 #include <TMB.hpp>
 
+// from TMB source:
+// TMB_BIND_ATOMIC(pbeta, 111, toms708::pbeta(x[0], x[1], x[2], 1, 0) )
 TMB_BIND_ATOMIC(pbeta_log,
   111,
   atomic::toms708::pbeta(x[0], x[1], x[2], 1, 1) )
@@ -13,11 +15,6 @@ Type pbeta_log(Type q, Type shape1, Type shape2) {
     args[3] = 0;
     return pbeta_log(args)[0];
 }
-//
-// #include "beta/pbeta.hpp"    // Get namespace 'toms708'
-// TMB_BIND_ATOMIC(pbeta,
-//   111,
-//   toms708::pbeta(x[0], x[1], x[2], 1, 0) )
 
 template <class Type>
 Type pnbinom2_log(Type x, Type size, Type mu) {
@@ -26,23 +23,19 @@ Type pnbinom2_log(Type x, Type size, Type mu) {
   // pr = size/(size + mu), 1-pr = mu/(size+mu);
   // pbeta(pr, size, x + 1, lower_tail, log_p);
   // check:
-  // size <- 1
-  // x <- 3
-  // mu <- 2
+  // size <- 1; x <- 3; mu <- 2
   // pnbinom(q = x, size = size, mu = mu, log = TRUE)
   // #> -0.2200619
   // pbeta(size/(size + mu), size, x + 1, log = TRUE)
   // #> -0.2200619
   return pbeta_log(size/(size + mu), size, x + Type(1.));
-    // return atomic::toms708::pbeta(asDouble(size/(size + mu)),
-    // asDouble(size), (asDouble(x) + 1.0), true, true);
 }
 
 template <class Type>
 Type dcensnb2_right(Type x, Type size, Type mu, int give_log = 0) {
   Type ll;
-  ll = pnbinom2_log(x-Type(1.0), size, mu); // F(lower-1)
-  ll = logspace_sub(Type(0.0), ll); // 1 - F(lower-1)
+  ll = pnbinom2_log(x - Type(1.), size, mu); // F(lower-1)
+  ll = logspace_sub(Type(0.), ll); // 1 - F(lower-1)
   if (give_log)
     return ll;
   else
@@ -58,16 +51,15 @@ Type objective_function<Type>::operator() ()
   PARAMETER(b0);
   PARAMETER(b1);
   PARAMETER(ln_phi);
-
-  Type f = 0;
+  Type jnll = 0.;
   for (int i = 0; i < y.size(); i++) {
-    if (cens(i) == 1) {
-      f -= dcensnb2_right(y(i), exp(ln_phi), exp(b0 + b1 * x(i)), true);
+    if (cens(i)) {
+      jnll -= dcensnb2_right(y(i), exp(ln_phi), exp(b0 + b1 * x(i)), true);
     } else {
-      Type s1 = b0 + b1 * x(i); // log(mu_i)
-      Type s2 = 2. * s1 - ln_phi; // log(var - mu)
-      f -= dnbinom_robust(y(i), s1, s2, true);
+      Type s1 = b0 + b1 * x(i);
+      Type s2 = Type(2.) * s1 - ln_phi;
+      jnll -= dnbinom_robust(y(i), s1, s2, true);
     }
   }
-  return f;
+  return jnll;
 }

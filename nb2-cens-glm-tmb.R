@@ -1,4 +1,3 @@
-# library(RTMB)
 library(TMB)
 
 set.seed(123)
@@ -15,16 +14,11 @@ lines(x, mu)
 cens <- rbinom(N, 1, 0.1)
 cens
 data <- list(y = obs, x = x, cens = cens)
-# data <- list(y = obs, x = x, cens = rep(0, N))
+# data <- list(y = obs, x = x, cens = rep(0, N)) # test
 parameters <- list(b0 = 0.3, b1 = 2, ln_phi = 0.5)
-# parameters <- list(b0 = 0, b1 = 0)
-
-# map <- list(ln_phi = factor(NA))
-# map <- NULL
 
 compile("nb2cens.cpp")
 dyn.load(dynlib("nb2cens"))
-# obj <- MakeADFun(data, parameters, DLL = "nb2cens", map = map)
 obj <- MakeADFun(data, parameters, DLL = "nb2cens")
 obj$fn(obj$par)
 obj$gr(obj$par)

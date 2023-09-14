@@ -23,6 +23,7 @@ f <- function(parms) {
 }
 
 obj <- MakeADFun(f, parameters)
+obj$fn(obj$par)
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 opt$convergence
 sdrep <- sdreport(obj)
